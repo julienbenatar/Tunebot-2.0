@@ -1,5 +1,10 @@
 # Tunebot
 
+## Configuration
+
+Configuration of secrets is done via environment variables. Copy
+`.env.sample` to `.env` and fill in appropriate values.
+
 ## Hacking on Tunebot
 
 1. Install [Vagrant][1].
