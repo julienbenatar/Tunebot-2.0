@@ -1,0 +1,950 @@
+angular.module('tunebot', [
+	'ngCookies',
+	'ui.router',
+]);
+
+angular.module('tunebot').config(function ($locationProvider, $stateProvider, $urlRouterProvider, $compileProvider) {
+
+    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|spotify):/);
+
+		$stateProvider
+			.state('login', {
+				url: '/login',
+				controller: 'LoginPageController',
+				templateUrl: '/login.html'
+			})
+			.state('logout', {
+				url: '/logout',
+				controller: function ($scope, LoginService, $state) {
+					LoginService.clearUser();
+					$state.go('login');
+				}
+			})
+			.state('home', {
+				resolve: {
+					tunebotUser: function (LoginService) {
+						return LoginService.user;
+					}
+				},
+				url: '/home',
+				controller: 'PlayerController',
+				templateUrl: '/home.html',
+				hasAccess: function (user) {
+					return !_.isNull(user) && user.email && user.id;
+				}
+			})
+			.state('admin', {
+				url: '/admin',
+				resolve: {
+					tunebotUser: function (LoginService) {
+						return LoginService.user;
+					}
+				},
+				controller: 'AdminPageController',
+				templateUrl: '/admin.html',
+				hasAccess: function (user) {
+					return !_.isNull(user) && user.email && user.id;
+				}
+			});
+
+			$urlRouterProvider.otherwise('/login');
+
+      // $locationProvider.html5Mode(true);
+	});
+
+angular.module('tunebot').run(function ($window, $rootScope, $state, LoginService) {
+
+	$rootScope.$on('$stateChangeStart', function(event, toState) {
+		if ( _.isFunction(toState.hasAccess) && ! (toState.hasAccess(LoginService.user))) {
+			event.preventDefault();
+			$state.go('login');
+		}
+
+	});
+});
+
+angular.module('tunebot').constant('TUNEBOT_API_URL', window.location.host);
+
+angular.module('tunebot').directive('debounce', function ($timeout) {
+	'use strict';
+
+	var defaultTime = 200; // milliseconds
+
+	return {
+		restrict: 'A',
+		require: 'ngModel',
+		priority: 99,
+		link: function(scope, elm, attr, ngModelCtrl) {
+			if (attr.type === 'radio' || attr.type === 'checkbox') {
+				return;
+			}
+
+			var waitTime = +attr.debounce || defaultTime;
+
+			elm.unbind('input');
+
+			var debounce;
+			elm.bind('input', function() {
+				$timeout.cancel(debounce);
+				debounce = $timeout( function() {
+					scope.$apply(function() {
+						ngModelCtrl.$setViewValue(elm.val());
+					});
+				}, waitTime);
+			});
+			elm.bind('blur', function() {
+				ngModelCtrl.$setViewValue(elm.val());
+			});
+		}
+	};
+});
+
+angular.module('tunebot').directive('tunebotSlider', function () {
+	function getVolume (cxValue) {
+		var volume = ( (cxValue - 5) / 1.65 ).toFixed();
+
+		if (volume < 0) {
+			volume = 0;
+		}
+		else if (volume > 100) {
+			volume = 100;
+		}
+
+		return volume;
+	}
+	return {
+		restrict: 'E',
+		templateUrl: 'slider.html',
+		scope: {
+			volume: '=',
+			onDrag: '&',
+			setBy: '='
+		},
+		link: function (scope, element, attrs) {
+			scope.getLastVolumeStr = function () {
+				if (scope.setBy && scope.setBy.name) {
+					return '( ' + scope.setBy.name + ' )';
+				}
+			};
+
+			var debounceTime = +attrs.debounceTime || 80;
+
+			var slider = {
+				isDragging: false,
+				minValue: 5,
+				maxValue: 170
+			};
+
+
+			function finishDragging (value) {
+				if ( !slider.isDragging ) {
+					return;
+				}
+				slider.isDragging = false;
+				var volume = getVolume(value);
+				scope.onDrag({newVolume: volume});
+			}
+
+			var circle = element.find('circle');
+
+			// @todo replace $watch with ngModelController
+			scope.$watch('volume', function (newVolume, oldVolume) {
+				var newCx;
+
+				// prevent from interfering with user
+				if (slider.isDragging) {
+					return;
+				}
+
+				if (_.isNumber(newVolume) && newVolume !== oldVolume) {
+					newCx = (slider.maxValue / 100 * newVolume).toFixed().toString();
+					circle.attr('cx', newCx);
+				}
+			});
+
+			var debouncedSetVol = _.debounce(function (value) {
+				scope.$apply( function() {
+					var volume = getVolume(value);
+					scope.onDrag({newVolume: volume});
+				});
+			}, debounceTime);
+
+			function handleMouseMove (event) {
+				if (! slider.isDragging ) { return; }
+
+				if( event.offsetX >= slider.minValue && event.offsetX <= slider.maxValue ) {
+					circle.attr('cx', event.offsetX.toString());
+				}
+			}
+
+			function handleMouseUp (event) {
+				var value = event.offsetX;
+				circle.attr('cx', value.toString());
+				finishDragging( value );
+			}
+
+			function handleMouseLeave (event) {
+				if ( slider.isDragging ) {
+					var value = event.offsetX;
+					circle.attr('cx', value.toString());
+					finishDragging( value );
+				}
+			}
+
+			function handleMouseWheel (event) {
+				event.preventDefault();
+
+				if (Math.abs(event.deltaX) >= (0.5 * Math.abs(event.deltaY))) {
+					return;
+				}
+
+				var prevCx = +circle.attr('cx');
+				var newCx = (event.deltaY < 0) ? prevCx - 0.4 : prevCx + 0.4
+
+				if (newCx <= slider.maxValue && newCx >= slider.minValue) {
+					circle.attr('cx', newCx.toString());
+					debouncedSetVol( newCx );
+				}
+			}
+
+			function handleMouseDown (event) {
+				slider.isDragging = true;
+			}
+
+			element
+				.on('mousedown', handleMouseDown)
+				.on('mousemove', handleMouseMove)
+				.on('mouseup', handleMouseUp)
+				.on('mouseleave', handleMouseLeave)
+				.on('mousewheel', handleMouseWheel);
+		}
+	};
+});
+
+angular.module('tunebot').controller('LoginPageController', function ($scope, LoginService, $state, $cookies, $http) {
+	var userCanResume = LoginService.resumeSession();
+
+	$scope.executeLogin = function () {
+		LoginService.login()
+			.then(function (user) {
+				$state.go('home');
+			});
+	};
+});
+
+angular.module('tunebot').controller('AdminPageController', function ($scope, APIService, $interval, tunebotUser) {
+
+	$scope.addRegex = function (regexText) {
+		APIService.addRegex(regexText);
+	};
+
+	$scope.removeRegex = function (regexText) {
+		APIService.removeRegex(regexText);
+	};
+
+	var stopPolling = $interval(getTrackBlacklist, 1000);
+
+	function getTrackBlacklist () {
+		APIService.getTrackBlacklist().then(function (response) {
+			$scope.trackBlacklist = response.data;
+		});
+	}
+
+	$scope.$on('$destroy', function () {
+		$interval.cancel(stopPolling);
+	});
+
+
+
+});
+
+
+// angular.module('tunebot').controller('HomeCtrl', function ($scope, API, Cache) {
+
+//   $scope.$watch('query', function (newQuery, oldQuery) {
+//     if (typeof newQuery === 'undefined' || newQuery.length < 1 || newQuery === oldQuery) {
+//       return;
+//     }
+
+//     API.search(newQuery).then(function (tracks) {
+//       $scope.results = tracks;
+//     });
+//   });
+
+// });
+
+
+angular.module('tunebot').service('Cache', function ($document, $q) {
+  var dbName = 'spotify_query_cache';
+
+  var dbOpenRequest = indexedDB.open(dbName, 1);
+
+  var db;
+
+  dbOpenRequest.onerror = function (event) {
+    // console.log('error opening db');
+  };
+
+  dbOpenRequest.onupgradeneeded = function (event) {
+    db = event.target.result;
+
+    var objectStore = db.createObjectStore('results', { keyPath: 'query' });
+
+    objectStore.transaction.oncomplete = function (event) {
+      var resultsObjectStore = db.transaction('results', 'readwrite').objectStore('results');
+    };
+  };
+
+  dbOpenRequest.onsuccess = function (event) {
+    db = event.target.result;
+  };
+
+  this.clear = function () {
+    indexedDB.deleteDatabase('spotify_query_cache');
+  };
+
+  this.set = function (queryResultsObj) {
+    var deferred = $q.defer();
+
+    var transaction = db.transaction(['results'], 'readwrite');
+
+    transaction.oncomplete = function (event) {
+      // console.log('transaction finished');
+    };
+
+    transaction.onerror = function (event) {
+      // console.log('transaction failed');
+    };
+
+    var objectStore = transaction.objectStore('results');
+
+    var request = objectStore.add(queryResultsObj);
+
+    request.onsuccess = function (event) {
+      // console.log('success storing queryResultsObj');
+    };
+
+    request.onerror = function (event) {
+      // console.log('error storing queryResultsObj');
+    };
+
+    return deferred.promise;
+  };
+
+  this.get = function (query) {
+    var deferred = $q.defer();
+
+    var transaction = db.transaction(['results']);
+    var objectStore = transaction.objectStore('results');
+
+    var request = objectStore.get(query);
+
+    request.onerror = function (event) {
+      // console.log('error retrieving result');
+    };
+
+    request.onsuccess = function (event) {
+      var response = event.target.result;
+      deferred.resolve(response ? response.tracks : response);
+    };
+
+    return deferred.promise;
+  };
+});
+
+angular.module('tunebot').service('SpotifyAPIService', function ($http, $q, Cache) {
+  var url = 'https://api.spotify.com/v1/search?q={queryTerm}&limit=50&type=album,artist,track';
+
+  function getQueryUrl (term) {
+    return url.replace('{queryTerm}', term);
+  }
+
+  this.search = function (query) {
+    var deferred = $q.defer();
+
+    Cache.get(query).then(function (results) {
+      if (typeof results !== 'undefined') {
+        deferred.resolve(results);
+      }
+      else {
+        $http.get(getQueryUrl(query))
+          .then(function (response) {
+            var tracks = response.data.tracks.items;
+            return tracks;
+          })
+          .then(function (tracks) {
+            Cache.set({
+              query: query,
+              tracks: tracks
+            });
+
+            deferred.resolve(tracks);
+          });
+      }
+    });
+
+    return deferred.promise;
+  };
+
+});
+
+
+angular.module('tunebot').filter('track', function () {
+	return function (rawTrack) {
+		var trackName = rawTrack.name;
+		var artistName = rawTrack.artists[0].name;
+
+		return [trackName, ': ', artistName].join('');
+	};
+});
+
+
+angular.module('tunebot').service('QueryCheckerService', function () {
+	this.urlTest = function (queryTerm) {
+  var matches = queryTerm.match(/track[:\/]([A-Za-z0-9]+)$/);
+
+  if (!_.isNull(matches)) {
+    return 'spotify:track:' + matches[1];
+  }
+  else {
+    return null;
+  }
+	};
+});
+
+
+angular.module('tunebot').controller('PlayerController', function (QueryCheckerService, $interval, $timeout, $document, $window, $scope, tunebotUser, APIService, TUNEBOT_API_URL, SpotifyAPIService) {
+	// if (tunebotUser.email === 'moshe.bildner@gmail.com') {
+
+	// 	// implement by:
+	// 	// 	on mouseenter - if cmd key is held down keep the input there, maybe change to mousemove
+	// 	// 	and when the mouse button is up or command is not held down hide the input
+
+
+
+	// 	var $win = angular.element($window);
+	// 	var input = document.createElement('input');
+	// 	input.classList.add('tunebotHiddenInput');
+
+	// 	document.body.insertBefore(input, document.body.firstChild);
+
+	// 	var $input = angular.element(input);
+
+	// 	$win.on('blur', function (event) {
+	// 		input.style.display = '';
+	// 	});
+
+	// 	$document.on('mouseenter', function (event) {
+	// 		console.log(event);
+	// 		// if the mouse is currently down, wait until mouse button comes up to hide the input element
+	// 		input.style.display = 'none';
+	// 	});
+
+	// 	$input.on('input', function (event) {
+	// 		var text = event.target.value;
+	// 		event.target.value = '';
+	// 		console.log(text);
+	// 		event.preventDefault();
+	// 		return false;
+	// 	});
+
+
+	// }
+
+	$document.on('keypress', function (event) {
+		if (event.target.tagName === 'INPUT') {
+			return true;
+		}
+
+		// pause
+		if (event.which === 32) {
+			event.preventDefault();
+
+			if ($scope.isPlaying()) {
+				$scope.player.controls.pause();
+			}
+			else if ($scope.isPaused()) {
+				$scope.player.controls.play();
+			}
+		}
+
+		// plus
+		if (event.which === 61) {
+			$scope.player.controls.incrementVolume();
+		}
+
+		// minus
+		if (event.which === 45) {
+			$scope.player.controls.decrementVolume();
+		}
+
+	});
+
+    $scope.$watchCollection('player.state.currentTrack', function (currentTrack) {
+      if (!_.isObject(currentTrack)) {
+        $document[0].title = 'Tunebot 2.0';
+      }
+      else {
+        var titleString = currentTrack.name + ': ' + currentTrack.artists[0].name;
+        $document[0].title = titleString;
+      }
+    });
+
+    // var ws = new WebSocket('ws://' + TUNEBOT_API_URL + '/tunebot/state/updates');
+
+    var poller = $interval(getPlayerState, 1000);
+    $scope.$on('$destroy', function () {
+    	$interval.cancel(poller);
+    });
+
+    // something about usinb websockets is breaking, temporarily disable and use polling instead.
+    // @todo replace websocket implementation with socketio
+
+    // ws.addEventListener('open', function () {
+    // 	$interval.cancel(poller);
+    // });
+
+    // ws.addEventListener('message', function (message) {
+    //   var data = JSON.parse(message.data);
+
+    //   if (data.type === 'tracklistUpdate') {
+    //     var tracklist = data.data;
+
+    //     $scope.$apply(function () {
+    //       $scope.player.state.tracklist = tracklist;
+    //       if (_.isEmpty(tracklist)) {
+    //         $scope.player.state.currentTrack = null;
+    //       }
+    //     });
+    //   }
+    //   else if (data.type === 'playerStateChanged' && data.data.type === 'playing') {
+    //     $scope.$apply(function () {
+    //       $scope.player.state.state = 'playing';
+    //       $scope.player.state.currentTrack = data.data.track;
+
+    //     });
+    //   }
+    //   else if (data.type === 'playerStateChanged' && data.data.type !== 'playing') {
+    //     $scope.$apply(function () {
+    //       $scope.player.state.state = 'paused';
+    //       $scope.player.state.currentTrack = null;
+    //     });
+    //   }
+    //   else if (data.type === 'volumeChanged') {
+    //     $scope.$apply(function () {
+    //       $scope.player.state.volume = data.data;
+    //     });
+    //   }
+    //   else if (data.type === 'timePositionChange') {
+    //     $scope.$apply(function () {
+    //       $scope.player.state.timePosition = data.data;
+    //     });
+    //   }
+
+    // });
+
+    // ws.addEventListener('close', function () {
+      // console.log('ws close, reverting to polling');
+    //   $interval(getPlayerState, 1000);
+    // });
+
+    // ws.addEventListener('error', function () {
+    //   console.log('ws error, reverting to polling');
+    //   $interval(getPlayerState, 1000);
+    // });
+
+    // window.onbeforeunload = function() {
+    //     ws.onclose = function () {}; // disable onclose handler first
+    //     ws.close();
+    // };
+
+		$scope.player = {
+			state: {},
+			search: {},
+			controls: {
+				skipTrack: function () {
+					APIService.removeTrack($scope.player.state.currentTrack.tlid);
+				},
+				queueTrack: function (uri, $event) {
+					if ($event.metaKey) {
+						APIService.queueTrackImmediate(uri);
+					}
+					else {
+						APIService.queueTrack(uri);
+					}
+					$scope.results = null;
+					$scope.player.search.query = '';
+				},
+				prevTrack: function () {
+		          APIService.previous();
+				},
+				togglePlay: function () {
+					if ($scope.player.state.state === 'playing') {
+						this.pause();
+					}
+					else {
+						this.play();
+					}
+				},
+				play: function () {
+					APIService.play();
+				},
+				pause: function () {
+					APIService.pause();
+				},
+				clear: function () {
+					APIService.clear();
+				},
+				incrementVolume: function () {
+					APIService.incrementVolume();
+				},
+				decrementVolume: function () {
+					APIService.decrementVolume();
+				},
+				setVolume: function (volume) {
+					APIService.setVolume(volume);
+				},
+				removeTrack: function (tlid, $event) {
+					if ($event.metaKey) {
+						APIService.removeTrack(tlid);
+					}
+				},
+				searchArtist: function (artistName) {
+					$scope.player.search.query = artistName;
+				}
+			}
+		};
+
+		$scope.isPlaying = function () {
+			return $scope.player.state.state === 'playing';
+		};
+
+		$scope.isPaused = function () {
+			return $scope.player.state.state === 'paused';
+		};
+
+		$scope.isCurrentTrack = function (track) {
+			return ($scope.player.state.currentTrack && $scope.player.state.currentTrack.uri === track.uri);
+		};
+
+		$scope.isNextTrack = function (index) {
+			return index === 1;
+		};
+
+		var debouncedSearch = _.debounce(search, 200);
+
+		$scope.$watch('player.search.query', function (newQuery, oldQuery) {
+			if (!_.isEmpty(newQuery) && newQuery !== oldQuery) {
+				var transformed = QueryCheckerService.urlTest(newQuery);
+
+				if (_.isNull(transformed)) {
+					debouncedSearch(newQuery);
+				}
+				else {
+					$timeout(function () {
+						APIService.queueTrack(transformed);
+						$scope.player.search.query = '';
+					}, 350);
+				}
+			}
+		});
+
+		$scope.user = tunebotUser;
+
+		function search (query) {
+
+			APIService.search(query)
+				.then(function (results) {
+					$scope.results = results;
+				})
+				.catch(function (e) {});
+
+
+			// SpotifyAPIService is beginning to return 502's -- need to investigage
+			// appears to be a problem with our failing to escape search strings
+
+
+			// SpotifyAPIService.search(query)
+			// 	.then(function (results) {
+			// 		$scope.results = results;
+			// 	})
+			// 	.catch(function (e) {
+			// 		// if for any reason external search fails, use our own server.
+			// 		APIService.search(query)
+			// 			.then(function (results) {
+			// 				$scope.results = results;
+			// 			})
+			// 			.catch(function (e) {});
+			// 	});
+
+		}
+
+		function getPlayerState () {
+			// todo upgrade this to use websockets
+			APIService.getPlayerState().then(function (state) {
+				if (_.isEmpty(state.tracklist)) {
+					state.currentTrack = null;
+				}
+
+				$scope.player.state = state;
+			});
+		}
+
+	getPlayerState();
+
+});
+
+angular.module('tunebot').filter('prettyTime', function () {
+	return function (timePosition, totalTime) {
+
+		var remainingTime = totalTime - timePosition;
+
+		var totalRemainingSeconds = remainingTime / 1000;
+
+		var remainingMinutes = Math.floor(totalRemainingSeconds / 60);
+		var remainingSeconds = Math.floor(totalRemainingSeconds % 60);
+
+		var remainingSecondsString = remainingSeconds.toString();
+
+		if (remainingSecondsString.length === 1) {
+			remainingSecondsString = '0' + remainingSecondsString;
+		}
+
+		var remainingTimeString = [remainingMinutes.toString(), remainingSecondsString].join(':');
+
+		return remainingTimeString;
+	};
+
+});
+
+angular.module('tunebot').service('LoginService', function ($state, $q, $rootScope, GoogleLoginService) {
+		var _this = this;
+
+		_this.user = null;
+
+		_this.resumeSession = function () {
+			var userString = window.localStorage.getItem('tunebot:persistent:user');
+			var user = _.isString(userString) ? JSON.parse(userString) : false;
+
+			if (user) {
+				_this.login(user).then(function () {
+					$state.go('home');
+				});
+			}
+
+		};
+
+		_this.clearUser = function () {
+			window.localStorage.removeItem('tunebot:persistent:user');
+			_this.user = null;
+		};
+
+		_this.login = function (user) {
+			var deferred = $q.defer();
+
+			if (_.isObject(user)) {
+				_this.user = user;
+				deferred.resolve(user);
+			}
+			else {
+				GoogleLoginService.login()
+					.then(function (googleUser) {
+						_this.user = googleUser;
+						window.localStorage.setItem('tunebot:persistent:user', JSON.stringify(googleUser));
+						return googleUser;
+					})
+					.then(deferred.resolve);
+			}
+
+			return deferred.promise;
+		};
+});
+
+
+angular.module('tunebot').service('GoogleLoginService', function ($q, $http, $window, $interval, TUNEBOT_API_URL) {
+
+	var OAUTHURL    =   'https://accounts.google.com/o/oauth2/auth?';
+	var VALIDURL    =   'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=';
+	var SCOPE       =   'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+	var CLIENTID    =   '___CLIENTID___';
+	var REDIRECT    =   'http://' + TUNEBOT_API_URL + '/home';
+	var LOGOUT      =   'http://accounts.google.com/Logout';
+	var TYPE        =   'token';
+	var _url        =   OAUTHURL + 'scope=' + SCOPE + '&client_id=' + CLIENTID + '&redirect_uri=' + REDIRECT + '&response_type=' + TYPE;
+	var acToken;
+	var tokenType;
+	var expiresIn;
+	var user;
+	var loggedIn    =   false;
+
+	this.login = function () {
+		var deferred = $q.defer();
+
+		var win = $window.open(_url, "windowname1", "width=800, height=600");
+
+		var polltimer = $interval(function () {
+			try {
+				if (win.document.URL.indexOf(REDIRECT) != -1) {
+					$interval.cancel(polltimer);
+					var url = win.document.URL;
+
+					acToken = gup(url, 'access_token');
+					tokenType = gup(url, 'token_type');
+					expiresIn = gup(url, 'expires_in');
+
+					win.close();
+
+					validateToken(acToken)
+						.then(function () {
+							return getUserInfo();
+						})
+						.then(deferred.resolve)
+						.catch(deferred.reject);
+				}
+			} catch (e) {
+				// suppress errors... gross
+			}
+		}, 500);
+
+		return deferred.promise;
+	};
+
+	function validateToken (token) {
+		var deferred = $q.defer();
+
+		var url = VALIDURL + token + '&callback=JSON_CALLBACK';
+
+		$http.jsonp(url)
+			.success(function (response) {
+				deferred.resolve(response.data);
+			})
+			.error(deferred.reject);
+
+		return deferred.promise;
+
+	}
+
+	function getUserInfo () {
+		var url = 'https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + acToken + '&callback=JSON_CALLBACK';
+
+		var deferred = $q.defer();
+
+		$http.jsonp(url)
+			.success(deferred.resolve)
+			.error(deferred.reject);
+
+		return deferred.promise;
+	}
+
+	function gup(url, name) {
+			name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+			var regexS = "[\\#&]"+name+"=([^&#]*)";
+			var regex = new RegExp( regexS );
+			var results = regex.exec( url );
+			if( results === null ) {
+					return "";
+			} else {
+					return results[1];
+			}
+	}
+
+});
+
+angular.module('tunebot').service('APIService', function ($http, $q, LoginService, TUNEBOT_API_URL) {
+  var host = 'http://' + TUNEBOT_API_URL;
+
+	function wrapped (url) {
+		var wrappedUrl = url + '?email=' + LoginService.user.email + '&picture=' + LoginService.user.picture + '&name=' + LoginService.user.name;
+		return wrappedUrl;
+	}
+
+	this.search = function (query) {
+		var deferred = $q.defer();
+
+		$http.post(wrapped(host + '/search/' + query))
+			.success(function (response) {
+				deferred.resolve(response);
+			})
+			.error(deferred.reject);
+
+		return deferred.promise;
+	};
+
+	this.play = function () {
+		return $http.post(wrapped(host + '/play'));
+	};
+
+	this.queueTrack = function (uri) {
+		return $http.post(wrapped(host + '/queueTrack'), {
+			uri: uri
+		});
+	};
+
+	this.queueTrackImmediate = function (uri) {
+		return $http.post(wrapped(host + '/queueTrack/immediate'), {
+			uri: uri
+		});
+	};
+
+
+	this.pause = function () {
+		return $http.post(wrapped(host + '/pause'));
+	};
+
+	// this.skip = function () {
+	// 	return $http.post(wrapped(host + '/skip'));
+	// };
+
+  this.previous = function () {
+    return $http.post(wrapped(host + '/previous'));
+  };
+
+	this.setVolume = function (volume) {
+		return $http.post(wrapped(host + '/volume/set'), {
+			volume: volume
+		});
+	};
+
+	this.getPlayerState = function () {
+		return $http.get(wrapped(host + '/state'))
+			.then(function (response) {
+				return response.data;
+			});
+	};
+
+	this.clear = function () {
+		return $http.post(wrapped(host + '/clear'));
+	};
+
+	this.incrementVolume = function () {
+		return $http.post(wrapped(host + '/volume/up'));
+	};
+
+	this.decrementVolume = function () {
+		return $http.post(wrapped(host + '/volume/down'));
+	};
+
+	this.removeTrack = function (tlid) {
+		return $http.post(wrapped(host + '/removeTrack'), {
+			tlid: tlid
+		});
+	};
+
+	this.addRegex = function (regexText) {
+		return $http.post(wrapped(host + '/addRegex'), {
+			regex: regexText
+		});
+	};
+
+	this.getTrackBlacklist = function () {
+		return $http.get(wrapped(host + '/getTrackBlacklist'))
+	};
+
+	this.removeRegex = function (regex) {
+		return $http.post(wrapped(host + '/removeRegex'), {
+			regex: regex
+		});
+	};
+
+
+});

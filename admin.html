@@ -1,0 +1,11 @@
+<h1>Add Regex</h1>
+<input ng-model="blacklistRegexText">
+<button ng-click="addRegex(blacklistRegexText)">Block That Shit</button>
+
+<h1>Blacklist Regexes:</h1>
+<ul>
+	<li ng-repeat="regex in trackBlacklist track by $index">
+		<p>{{ regex }}</p>
+		<button ng-click="removeRegex(regex)">unblock</button>
+	</li>
+</ul>

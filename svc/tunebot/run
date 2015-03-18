@@ -1,0 +1,13 @@
+#!/bin/bash
+
+exec 2>&1
+cd /opt/tunebot
+
+# If we're running in Vagrant, run with nodemon so code changes are detected
+# and the server is restarted. In production, run directly with nodejs.
+if [ -d "/vagrant" ]; then
+  /bin/bash ./scripts/build_templates.sh
+  exec nodemon api-server.js
+else
+  exec nodejs api-server.js
+fi

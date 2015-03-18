@@ -1,0 +1,9 @@
+node_modules/
+*.log
+nohup.out
+*.rdb
+.vagrant
+.env
+
+static/js/app.js
+mopidy.conf

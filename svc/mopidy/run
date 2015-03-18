@@ -1,0 +1,4 @@
+#!/bin/bash
+
+exec 2>&1
+exec chpst -u mopidy /usr/bin/python /usr/bin/mopidy --config /opt/tunebot/mopidy.conf

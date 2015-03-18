@@ -1,0 +1,33 @@
+{
+  "name": "Tunebot-2.0",
+  "version": "0.0.0",
+  "description": "API server for collaborative streaming music player.",
+  "main": "api-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbildner/Tunebot-2.0.git"
+  },
+  "author": "\"Moshe Bildner <moshe@nextbigsound.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mbildner/Tunebot-2.0/issues"
+  },
+  "homepage": "https://github.com/mbildner/Tunebot-2.0",
+  "devDependencies": {},
+  "dependencies": {
+    "body-parser": "^1.9.2",
+    "cookie-parser": "^1.3.3",
+    "express": "^4.10.2",
+    "express-ws": "^0.2.1",
+    "googleapis": "^2.0.2",
+    "lodash": "^2.4.1",
+    "mopidy": "^0.4.1",
+    "node-schedule": "^0.1.13",
+    "q": "^1.1.1",
+    "redis": "^0.12.1",
+    "yargs": "^1.3.3"
+  }
+}
