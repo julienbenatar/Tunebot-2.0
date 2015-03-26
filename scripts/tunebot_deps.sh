@@ -7,6 +7,10 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 apt-get update --yes
 
+# Install node on Raspbian
+# wget http://node-arm.herokuapp.com/node_latest_armhf.deb
+# sudo dpkg -i node_latest_armhf.deb
+
 apt-get install curl python python-pip nodejs npm redis-server libmysqlclient-dev runit --yes
 
 # Link the nodejs executable to the name that every fucking package in NPM
