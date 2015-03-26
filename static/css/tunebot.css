@@ -1,21 +1,35 @@
 html {
 	font-size: 14px;
-	font-family: "adobe-caslon-pro";
+	font-family: "azo-sans-web", Arial, sans-serif;
 	color: #18283c;
 	-webkit-font-smoothing: antialiased;
 }
 
+.tunebot__background {
+	width: 100%;
+	height: 100%;
+	position: fixed;
+	z-index: 0;
+	top: 0px;
+	background: -webkit-linear-gradient(#222, #444);
+	background: -o-linear-gradient(r#222, #444);
+	background: -moz-linear-gradient(#222, #444);
+	background: linear-gradient(#222, #444);
+}
+
+::selection {
+	background-color: #aaa;
+}
+
 .tunebotHeader {
 	width: 100%;
-	background-color: #354f68;
+	background-color: #222;
+	position: relative;
+	z-index: 10;
 }
 
-.tunebotHeader--mediumHeight {
-	height: 330px;
-}
-
-.tunebotHeader--smallHeight {
-	height: 240px;
+.tunebotPlayer__header {
+	margin-top: 24px;
 }
 
 .homeMessage {
@@ -31,20 +45,44 @@ html {
 .signin-button {
 	margin: auto;
 	display: block;
-	font-family: "azo-sans-web";
-	font-size: 15px;
-	font-weight: 400;
-	background-color: #18283c;
-	border: none;
-	outline: 0;
-	height: 34px;
-	line-height: 28px;
-	padding: 0 18px;
+	font-size: 18px;
+	font-weight: 700;
+	border: 2px solid #fff;
+	border-radius: 4px;
+	padding: 16px 32px;
 	color: #fff;
 	text-transform: uppercase;
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
+	background-color: #333;
+	position: relative;
+	z-index: 100;
+	opacity: 0.66;
+	margin-top: 180px;
+}
+.letterspacingFix {
+	letter-spacing: 10px;
+}
+.signin-button:hover {
+	background-color: #666;
+}
+.signin-button:active {
+	color: #444;
+	border: 2px solid #666;
+	background-color: #222;
+}
+.signin-button:focus {
+	outline: none;
+}
+
+.tunebotLogo {
+	position: absolute;
+	bottom: 0px;
+	margin-left: auto;
+	margin-right: auto;
+	left: 0;
+	right: 0;
 }
 
 .tunebotLogo__head {
@@ -54,8 +92,8 @@ html {
 	background-size: 207px 163px;
 	width: 207px;
 	height: 163px;
-	-webkit-animation: nod 800ms 0.5s infinite linear both;
-	animation: nod 800ms 0.5s infinite linear both;
+	-webkit-animation: nod 600ms 0.5s infinite linear both;
+	animation: nod 600ms 0.5s infinite linear both;
 }
 
 .tunebotLogo__body {
@@ -65,6 +103,11 @@ html {
 	background-size: 207px 182px;
 	width: 207px;
 	height: 182px;
+}
+
+.login__title {
+	font-weight: 700;
+	margin-top: 12px;
 }
 
 @-webkit-keyframes nod {
@@ -82,7 +125,7 @@ html {
 	width: 900px;
 	position: relative;
 	margin: auto;
-	padding: 50px 0;
+	padding: 36px 0;
 	color: #F4F4F4;
 	box-sizing: border-box;
 	-moz-box-sizing: border-box;
@@ -93,6 +136,16 @@ html {
 	position: relative;
 	display: inline-block;
 	vertical-align: middle;
+	transition: all 0.1s ease;
+}
+.tunebotPlayer__button:hover {
+	-webkit-transform: scale3d(1.02,1.02,1.02);
+  	transform: scale3d(1.02,1.02,1.02);
+}
+.tunebotPlayer__button:active {
+	-webkit-transform: scale3d(0.95,0.95,0.95);
+	transform: scale3d(0.95,0.95,0.95);
+	opacity: 0.5;
 }
 
 .tunebotPlayer__button--play {
@@ -111,6 +164,25 @@ html {
 	height: 80px;
 }
 
+.tunebotPlayer__button--leftMain {
+	text-decoration: none;
+}
+
+.tunebotPlayer__button--like_track {
+	background: url(../images/heart-full.svg);
+	background-size: 20px;
+	width: 20px;
+	height: 20px;
+	text-decoration: none;
+}
+
+.tunebotPlayer__button--unlike_track {
+	background: url(../images/heart-empty.svg);
+	background-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
 .tunebotPlayer__button--play_local {
 	background: url(../images/spotify-icon.png);
 	background-size: 20px;
@@ -123,6 +195,7 @@ html {
 	background-size: 20px;
 	width: 20px;
 	height: 20px;
+	/*margin-left: 12px;*/
 }
 
 .tunebotPlayer__button--volume {
@@ -190,19 +263,31 @@ html {
   border-left-color: #0066cc;
 }
 
+.tunebot__playControls {
+	display: inline-block;
+	margin-left: 28px;
+}
+
+.tunebot__volumeControls {
+	display: inline-block;
+	float: right;
+}
+
 .tunebotUser {
-	position: absolute;
-	left: 0;
-	top: 24px;
+	margin-top: 30px;
+	display: inline-block;
+	width: 360px;
 }
 
 .tunebotUser__name {
-	font-family: "azo-sans-web";
 	text-transform: uppercase;
-	font-size: 12px;
+	font-size: 11px;
 	vertical-align: middle;
 	margin-left: 10px;
 	display: inline-block;
+	font-weight: 700;
+	cursor: default;
+	color: #fff;
 }
 
 .tunebotUser__picture {
@@ -216,9 +301,8 @@ html {
 	position: relative;
 	display: inline-block;
 	vertical-align: middle;
-	width: 294px;
-	height: 34px;
-	margin: 0 68px 0 0;
+	width: 100%;
+	height: 48px;
 }
 
 .tunebotSearch__suggestions {
@@ -246,8 +330,10 @@ html {
 	width: 100%;
 	height: 100%;
 	text-indent: 10px;
-	border-color: transparent;
-	font-size: 12px;
+	font-size: 14px;
+	color: #333;
+	box-shadow: inset 0px 7px 5px -5px hsla(0,0%,0%,.25);
+	border: none;
 }
 
 .tunebotSearch__input:focus {
@@ -257,17 +343,16 @@ html {
 
 .tunebotSearch__input:focus::-webkit-input-placeholder {
 	color: #deddd8;
-	transition: color .25s ease-in;
+	transition: color .1s ease-in;
 }
 
 .tunebotResults {
 	position: absolute;
 	top: 34px;
 	margin: 0;
+	width: 900px;
 	background-color: #FFF;
 	padding-left: 0;
-	box-shadow: 6px 6px rgba(0, 0, 0, 0.2);
-	max-height: 400px;
 	overflow-y: auto;
 	z-index: 2;
 }
@@ -275,8 +360,12 @@ html {
 .tunebotResults__result {
 	list-style: none;
 	cursor: pointer;
-	font-size: 12px;
-	margin: 12px 16px;
+	font-size: 14px;
+	margin: 24px 16px;
+	color: #333;
+}
+.tunebotResults__result:hover {
+	color: #3a9fa3;
 }
 
 .tunebotResults__hr {
@@ -284,6 +373,10 @@ html {
 	height: 1px;
 	background-color: #deddd8;
 	width: 100%;
+}
+
+.tunebotResults__songLength {
+	color: #aaa;
 }
 
 .tunebotPlayer__emergency {
@@ -303,20 +396,39 @@ html {
 .tunebotState {
 	display: block;
 	text-align: center;
+	padding: 24px 0px;
 }
 
 .tunebotState__title {
 	text-align: center;
 	margin-bottom: 0;
-	height: 42px;
+	height: 18px;
+	color: #888;
+	font-size: 11px;
+	text-transform: uppercase;
 }
 
 .tunebotState__nowPlaying {
-	font-family: "azo-sans-web";
 	color: #FFF;
-	font-size: 32px;
+	font-size: 48px;
+	line-height: 1;
 	letter-spacing: 2px;
 	text-transform: uppercase;
+}
+
+.tunebotState__songName {
+	margin-top: 12px;
+}
+.tunebotState__songArtist {
+	font-size: 28px;
+	margin-top: 12px;
+}
+
+.tunebotState__remaining {
+	margin-top: 12px;
+	color: #888;
+	font-size: 11px;
+	font-weight: 700;
 }
 
 .tunebotState__songName,
@@ -331,17 +443,17 @@ html {
 }
 
 ::-webkit-input-placeholder {
-	color: #000;
+	color: #333;
 	transition: color .25s ease-in;
 }
 
 :-moz-placeholder {
-	color: #000;
+	color: #333;
 	transition: color .25s ease-in;
 }
 
 ::-moz-placeholder {
-	color: #000;
+	color: #333;
 	transition: color .25s ease-in;
 }
 
@@ -356,22 +468,36 @@ html {
 .tunebotSlider__circle {
 	fill: white;
 	display: block;
+	cursor: pointer;
+}
+
+.tunebotSlider__circle:active {
+	fill: #bbb;
+	cursor: pointer;
+}
+.tunebotSlider__circle:focus {
+	cursor: pointer;
 }
 
 .tunebotSlider__line {
-	stroke: #18283c;
-	stroke-width: 2;
+	stroke: #000;
+	stroke-width: 4;
 }
 
 .tunebotSlider__volume {
 	width: 100%;
+	padding-left: 15px;
 }
 
 .tunebotSlider__display {
 	font-family: "azo-sans-web";
 	position: absolute;
-	bottom: 24px;
-	font-size: 12px;
+	bottom: 10px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: #888;
+	padding-left: 15px;
 }
 
 .tunebotPlaylist {
@@ -379,18 +505,34 @@ html {
 	position: relative;
 	margin: auto;
 	padding: 40px 0;
+	cursor: default;
+}
+
+.tunebotPlaylist__Song {
+	width: 720px;
 }
 
 .tunebotSong {
 	position: relative;
 	font-size: 20px;
+	color: #bbb;
 	letter-spacing: 0.07em;
 	text-transform: uppercase;
 	line-height: 16px;
 	padding: 30px 0 16px 0;
-	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+	border-bottom: 1px solid rgba(0, 0, 0, 0.2);
 	box-sizing: border-box;
 }
+
+.tunebotSong__songName {
+	color: #bbb;
+	line-height: 1.2;
+}
+.tunebotSong__artist {
+	color: #888;
+	line-height: 1.2;
+}
+
 
 .tunebotSong__author {
 	height: 30px;
@@ -415,9 +557,9 @@ html {
 
 .tunebotEqualizer__bar {
 	display: inline-block;
-	background: #18283c;
+	background: #bbb;
 	margin: 0;
-	width: 3px;
+	width: 6px;
 	height: 20px;
 	box-sizing: border-box;
 }
@@ -427,23 +569,23 @@ html {
 }
 
 .tunebotEqualizer__bar--first {
-	-webkit-animation: music 1.5s linear infinite;
-	animation: music 1.5s linear infinite;
+	-webkit-animation: music1 0.5s linear infinite;
+	animation: music1 0.5s linear infinite;
 }
 
 .tunebotEqualizer__bar--second {
-	-webkit-animation: music 1.2s linear infinite;
-	animation: music 1.2s linear infinite;
+	-webkit-animation: music2 0.5s linear infinite;
+	animation: music2 0.5s linear infinite;
 }
 
 .tunebotEqualizer__bar--third {
-	-webkit-animation: music 1.1s linear infinite;
-	animation: music 1.1s linear infinite;
+	-webkit-animation: music3 0.5s linear infinite;
+	animation: music3 0.5s linear infinite;
 }
 
-@-webkit-keyframes music {
+@-webkit-keyframes music1 {
 	0% {
-		height: 0;
+		height: 5px;
 	}
 	50% {
 		height: 20px;
@@ -454,15 +596,71 @@ html {
 }
 
 
-@keyframes music {
+@keyframes music1 {
 	0% {
-		height: 0;
+		height: 5px;
 	}
 	50% {
 		height: 20px;
 	}
 	100% {
 		height: 5px;
+	}
+}
+
+@-webkit-keyframes music2 {
+	0% {
+		height: 10px;
+	}
+	25% {
+		height: 5px;
+	}
+	75% {
+		height: 20px;
+	}
+	100% {
+		height: 10px;
+	}
+}
+
+
+@keyframes music2 {
+	0% {
+		height: 10px;
+	}
+	25% {
+		height: 5px;
+	}
+	75% {
+		height: 20px;
+	}
+	100% {
+		height: 10px;
+	}
+}
+
+@-webkit-keyframes music3 {
+	0% {
+		height: 20px;
+	}
+	50% {
+		height: 5px;
+	}
+	100% {
+		height: 20px;
+	}
+}
+
+
+@keyframes music3 {
+	0% {
+		height: 20px;
+	}
+	50% {
+		height: 5px;
+	}
+	100% {
+		height: 20px;
 	}
 }
 
@@ -471,27 +669,19 @@ html {
 .tunebotSong--isPlaying .tunebotEqualizer__bar--first,
 .tunebotSong--isPlaying .tunebotEqualizer__bar--second,
 .tunebotSong--isPlaying .tunebotEqualizer__bar--third {
-	opacity: 0.3;
+	color: #fff;
 }
 
-.tunebotSong--isPlaying:hover .tunebotSong__artist,
-.tunebotSong--isPlaying:hover .tunebotSong__songName,
-.tunebotSong--isPlaying:hover .tunebotEqualizer__bar--first,
-.tunebotSong--isPlaying:hover .tunebotEqualizer__bar--second,
-.tunebotSong--isPlaying:hover .tunebotEqualizer__bar--third {
-	opacity: 1;
-}
-
-.tunebotSong--isNext .tunebotSong__songName:before {
+/*.tunebotSong--isNext .tunebotSong__songName:before {
 	position: absolute;
 	content: 'NEXT';
-	color: #3a9fa3;
+	color: #fff;
 	font-size: 13px;
-	bottom: 20px;
+	bottom: 15px;
 	left: -55px;
 	font-family: "azo-sans-web";
 	font-weight: 700;
-}
+}*/
 
 /*.tunebotSong:hover .tunebotSong__arrow {
 	display: block;

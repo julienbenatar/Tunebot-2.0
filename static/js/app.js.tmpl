@@ -123,7 +123,7 @@ angular.module('tunebot').directive('tunebotSlider', function () {
 		link: function (scope, element, attrs) {
 			scope.getLastVolumeStr = function () {
 				if (scope.setBy && scope.setBy.name) {
-					return '( ' + scope.setBy.name + ' )';
+					return 'Changed by ' + scope.setBy.name;
 				}
 			};
 
@@ -399,16 +399,30 @@ angular.module('tunebot').filter('track', function () {
 });
 
 
-angular.module('tunebot').service('QueryCheckerService', function () {
-	this.urlTest = function (queryTerm) {
-  var matches = queryTerm.match(/track[:\/]([A-Za-z0-9]+)$/);
+angular.module('tunebot').service('QueryCheckerService', function ($http) {
+	this.urlTest = function (queryTerm, callback) {
+		var trackMatche = queryTerm.match(/track[:\/]([A-Za-z0-9]+)$/);
 
-  if (!_.isNull(matches)) {
-    return 'spotify:track:' + matches[1];
-  }
-  else {
-    return null;
-  }
+		if (!_.isNull(trackMatche)) {
+			callback( ['spotify:track:' + trackMatche[1]] );
+		}
+		else {
+			var albumMatche = queryTerm.match(/album[:\/]([A-Za-z0-9]+)$/);			
+			if (!_.isNull(albumMatche)) {
+				$http.get('https://api.spotify.com/v1/albums/'+albumMatche[1]+'/tracks')
+					.success(function (response) {
+						var tracks = _.map(response.items, function(item){return 'spotify:track:' + item.id;});
+						callback( tracks );
+					})
+				.error(function(){
+					callback(null);
+				});
+
+			} else {
+				callback(null);
+			}
+			
+		}
 	};
 });
 
@@ -562,8 +576,13 @@ angular.module('tunebot').controller('PlayerController', function (QueryCheckerS
 			state: {},
 			search: {},
 			controls: {
+				likeTrack: function (event) {
+					event.preventDefault();
+					APIService.like($scope.player.state.currentTrack.uri);
+				},
 				skipTrack: function () {
-					APIService.removeTrack($scope.player.state.currentTrack.tlid);
+					var tlid = $scope.player.state.tracklist[0].track.tlid;
+					APIService.removeTrack(tlid).then(APIService.play);
 				},
 				queueTrack: function (uri, $event) {
 					if ($event.metaKey) {
@@ -634,18 +653,24 @@ angular.module('tunebot').controller('PlayerController', function (QueryCheckerS
 		var debouncedSearch = _.debounce(search, 200);
 
 		$scope.$watch('player.search.query', function (newQuery, oldQuery) {
+			if(_.isEmpty(newQuery)) {
+				$scope.player.search.query = '';
+				$scope.results = [];
+			}
 			if (!_.isEmpty(newQuery) && newQuery !== oldQuery) {
-				var transformed = QueryCheckerService.urlTest(newQuery);
-
-				if (_.isNull(transformed)) {
-					debouncedSearch(newQuery);
-				}
-				else {
-					$timeout(function () {
-						APIService.queueTrack(transformed);
-						$scope.player.search.query = '';
-					}, 350);
-				}
+				QueryCheckerService.urlTest(newQuery, function(transformed){
+					if (_.isNull(transformed)) {
+						debouncedSearch(newQuery);
+					}
+					else {
+						$timeout(function () {
+							_.each(transformed, function(t){
+								APIService.queueTrack(t);
+							});
+							$scope.player.search.query = '';
+						}, 350);
+					}
+				});
 			}
 		});
 
@@ -858,6 +883,12 @@ angular.module('tunebot').service('APIService', function ($http, $q, LoginServic
 		return wrappedUrl;
 	}
 
+	this.like = function (trackUri) {
+		return $http.post(wrapped(host + '/track/like'), {
+			track: trackUri
+		});
+	};
+
 	this.search = function (query) {
 		var deferred = $q.defer();
 
@@ -891,13 +922,13 @@ angular.module('tunebot').service('APIService', function ($http, $q, LoginServic
 		return $http.post(wrapped(host + '/pause'));
 	};
 
-	// this.skip = function () {
-	// 	return $http.post(wrapped(host + '/skip'));
-	// };
+	this.skip = function () {
+		return $http.post(wrapped(host + '/skip'));
+	};
 
-  this.previous = function () {
-    return $http.post(wrapped(host + '/previous'));
-  };
+	this.previous = function () {
+		return $http.post(wrapped(host + '/previous'));
+	};
 
 	this.setVolume = function (volume) {
 		return $http.post(wrapped(host + '/volume/set'), {
