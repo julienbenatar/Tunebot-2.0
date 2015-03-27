@@ -1,78 +1,94 @@
-<div class="tunebotSearch">
-	<input
-		ng-model="player.search.query"
-		class="tunebotSearch__input"
-		placeholder="Search or queue Spotify URI or URL"
-		nbs-debounce
-	/>
-
-	<ul class="tunebotResults">
-		<li
-			class="tunebotResults__result"
-			ng-repeat="result in results"
-		>
-		<div ng-click="player.controls.queueTrack(result.uri, $event)">
-			<span class="tunebotResults__songName">{{ result.name }}</span>
-			/
-			<span class="tunebotResults__artist">{{ result.artists[0].name }}</span>
-			<i class="tunebotSearch__icon"></i>
-			<hr class="tunebotResults__hr" />
-		</div>
-		</li>
-	</ul>
+<div class="tunebot__background">
 </div>
-<div class="tunebotHeader tunebotHeader--mediumHeight">
-	<div class="tunebotPlayer">
-	<div class="tunebotPlayer__header">
-		<tunebot-search
-			class="tunebotSearch"
-		></tunebot-search>
 
-		<a href="{{ player.state.currentTrack.uri }}">
+<div class="tunebotHeader">
+
+	<div class="tunebotPlayer">
+
+		<div class="tunebotSearch">
+			<input
+				ng-model="player.search.query"
+				class="tunebotSearch__input"
+				placeholder="Search OR paste Spotify URI"
+				nbs-debounce
+			/>
+
+			<ul class="tunebotResults">
+				<li
+					class="tunebotResults__result"
+					ng-repeat="result in results"
+				>
+				<div ng-click="player.controls.queueTrack(result.uri, $event)">
+					<span class="tunebotResults__songName">{{ result.name }}</span>
+					/
+					<span class="tunebotResults__artist">{{ result.artists[0].name }}</span>
+					<i class="tunebotSearch__icon"></i>
+					<hr class="tunebotResults__hr" />
+				</div>
+				</li>
+			</ul>
+		</div>
+
+
+	<div class="tunebotPlayer__header">
+
+		<div class="tunebotUser">
+			<img ng-src="{{user.picture}}" class="tunebotUser__picture"></img>
+			<span class="tunebotUser__name">DJ {{user.name}}</span>
+		</div>
+
+		<div class="tunebot__playControls">
+			<!-- <a href="{{ player.state.currentTrack.uri }}" class="tunebotPlayer__button--leftMain">
+				<div
+					class="tunebotPlayer__button tunebotPlayer__button--play_local"
+				>
+				</div>
+			</a>
+			<a href="#" ng-click="player.controls.likeTrack($event)" class="tunebotPlayer__button--leftMain">
+				<div
+					class="tunebotPlayer__button tunebotPlayer__button--like_track"
+				>
+				</div>
+			</a> -->
 			<div
-				class="tunebotPlayer__button tunebotPlayer__button--play_local"
+				class="tunebotPlayer__button"
+				ng-class="isPlaying() ? 'tunebotPlayer__button--pause' : 'tunebotPlayer__button--play'"
+				title="{{ isPaused() ? 'paused by: ' + player.state.lastPlayToggleUser.name : 'pause' }}"
+				ng-click="player.controls.togglePlay()"
 			>
 			</div>
-		</a>
-
-		<div
-			class="tunebotPlayer__button"
-			ng-class="isPlaying() ? 'tunebotPlayer__button--pause' : 'tunebotPlayer__button--play'"
-			title="{{ isPaused() ? 'paused by: ' + player.state.lastPlayToggleUser.name : 'pause' }}"
-			ng-click="player.controls.togglePlay()"
-		>
+			<div class="tunebotPlayer__button tunebotPlayer__button--next"
+				ng-click="player.controls.skipTrack()"
+			>
+			</div>
 		</div>
 
-		<div class="tunebotPlayer__button tunebotPlayer__button--next"
-			ng-click="player.controls.skipTrack()"
-		>
+		<div class="tunebot__volumeControls">
+			<tunebot-slider
+				class="tunebotSlider"
+				volume="player.state.volume"
+				on-drag="player.controls.setVolume(newVolume)"
+				set-by="player.state.lastVolumeUser"
+			></tunebot-slider>
+			<div class="tunebotPlayer__button tunebotPlayer__button--volume">
+			</div>
 		</div>
 
-		<tunebot-slider
-			class="tunebotSlider"
-			volume="player.state.volume"
-			on-drag="player.controls.setVolume(newVolume)"
-			set-by="player.state.lastVolumeUser"
-		></tunebot-slider>
-
-		<div class="tunebotPlayer__button tunebotPlayer__button--volume">
-		</div>
 	</div>
 	<div class="tunebotState" ng-show="player.state.currentTrack">
 		<h1 class="tunebotState__title">{{ isPaused() ? 'Paused by: ' + player.state.lastPlayToggleUser.name : 'Now Playing' }}</h1>
 		<div class="tunebotState__nowPlaying">
-			<span class="tunebotState__songName">{{ player.state.currentTrack.name }}</span> /
-			<span class="tunebotState__songArtist">{{ player.state.currentTrack.artists[0].name }}</span>
+			<div class="tunebotState__songName">{{ player.state.currentTrack.name }}</div>
+			<div class="tunebotState__songArtist">{{ player.state.currentTrack.artists[0].name }}</div>
 		</div>
 		<div class="tunebotState__remaining">
 			{{ player.state.timePosition | prettyTime:player.state.currentTrack.length }} REMAINING
 		</div>
 	</div>
-	<div class="tunebotUser">
-		<img ng-src="{{user.picture}}" class="tunebotUser__picture"></img>
-		<span class="tunebotUser__name"><strong>{{user.name}}</strong></span>
-	</div>
+
 </div>
+</div>
+
 <div class="tunebotPlaylist">
 	<div
 		class="tunebotSong"
@@ -82,10 +98,16 @@
 		dnd-list="tracklistModel.list"
 		ng-dblclick="player.controls.searchArtist(track.track.track.artists[0].name)"
 	>
+	<div class="tunebotPlaylist__Song">
 		<span class="tunebotSong__songName">{{ track.track.track.name }}</span>
-		<span class="tunebotSong__artist"> / {{ track.track.track.artists[0].name }}</span>
+		<span class="tunebotSong__artist"> {{ track.track.track.artists[0].name }}</span>
+	</div>
 
 		<div class="tunebotEqualizer" ng-if="player.state.currentTrack.uri===track.track.track.uri">
+			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--first"></span>
+			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--second"></span>
+			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--third"></span>
+			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--second"></span>
 			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--first"></span>
 			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--second"></span>
 			<span class="tunebotEqualizer__bar tunebotEqualizer__bar--third"></span>
