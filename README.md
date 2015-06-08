@@ -59,6 +59,74 @@ like so:
   - `sv restart mopidy`
   - `sv restart tunebot`
 
+## Installing on Mac OS X
+
+1. Install [Homebrew](http://brew.sh/)
+2. Tap the Mopidy keg:
+
+    ```shell
+    $ brew tap mopidy/mopidy
+    ```
+
+3. Install mopidy and plugins:
+
+    ```shell
+    $ brew install mopidy mopidy-spotify
+    $ pip install mopidy-scrobbler
+    ```
+
+4. Install Nodejs:
+
+    ```shell
+    $ brew install nodejs
+    ```
+
+5. Install & start Redis:
+
+    ```shell
+    $ brew install redis
+    $ ln -sfv /usr/local/opt/redis/homebrew.mxcl.redis.plist ~/Library/LaunchAgents
+    $ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist
+    ```
+
+6. Get Tunebot:
+
+    ```shell
+    $ cd ~ && git clone git@github.com:nextbigsoundinc/Tunebot-2.0.git tunebot
+    $ sudo ln -s ~/tunebot /opt/tunebot
+    ```
+
+7. Install Node dependencies:
+
+   ```
+   $ cd /opt/tunebot && npm install
+   $ npm install -g forever
+   ```
+
+8. Configure Tunebot:
+
+    ```shell
+    $ cd /opt/tunebot
+    $ cp .env.sample .env
+
+    # Edit .env to set appropriate values
+
+    $ ./scripts/build_templates.sh
+    ```
+
+9. Start Mopidy:
+
+   ```shell
+   $ cp /opt/tunebot/launchd/homebrew.mopidy.mopidy.plist ~/Library/LaunchAgents
+   $ launchctl load ~/Library/LaunchAgents/homebrew.mopidy.mopidy.plist
+   ```
+
+10. Start Tunebot:
+
+    ```shell
+    $ cd /opt/tunebot; sudo forever start -o tunebot-api.log -e tunebot-err.log api-server.js
+    ```
+
 ## Building & running a Docker container
 
 These instructions assume you have a working Docker setup already.
