@@ -128,6 +128,17 @@ like so:
     $ cd /opt/tunebot; sudo forever start -o tunebot-api.log -e tunebot-err.log api-server.js
     ```
 
+12. To stop Tunebot:
+
+    ```shell
+    $ ps auxww | grep api-server.js
+
+    # Note the PID of both the node process running api-server.js and
+    # the forever monitor process.
+
+    $ sudo kill -9 <node PID> <forever monitor PID>
+    ```
+
 ## Building & running a Docker container
 
 These instructions assume you have a working Docker setup already.
