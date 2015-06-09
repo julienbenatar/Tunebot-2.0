@@ -62,26 +62,27 @@ like so:
 ## Installing on Mac OS X
 
 1. Install [Homebrew](http://brew.sh/)
-2. Tap the Mopidy keg:
+2. Install [XQuartz](http://xquartz.macosforge.org/landing/)
+3. Tap the Mopidy keg:
 
     ```shell
     $ brew tap mopidy/mopidy
     ```
 
-3. Install mopidy and plugins:
+4. Install mopidy and plugins:
 
     ```shell
     $ brew install mopidy mopidy-spotify
     $ pip install mopidy-scrobbler
     ```
 
-4. Install Nodejs:
+5. Install Nodejs:
 
     ```shell
     $ brew install nodejs
     ```
 
-5. Install & start Redis:
+6. Install & start Redis:
 
     ```shell
     $ brew install redis
@@ -89,21 +90,21 @@ like so:
     $ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist
     ```
 
-6. Get Tunebot:
+7. Get Tunebot:
 
     ```shell
     $ cd ~ && git clone git@github.com:nextbigsoundinc/Tunebot-2.0.git tunebot
     $ sudo ln -s ~/tunebot /opt/tunebot
     ```
 
-7. Install Node dependencies:
+8. Install Node dependencies:
 
    ```
    $ cd /opt/tunebot && npm install
    $ npm install -g forever
    ```
 
-8. Configure Tunebot:
+9. Configure Tunebot:
 
     ```shell
     $ cd /opt/tunebot
@@ -114,14 +115,14 @@ like so:
     $ ./scripts/build_templates.sh
     ```
 
-9. Start Mopidy:
+10. Start Mopidy:
 
-   ```shell
-   $ cp /opt/tunebot/launchd/homebrew.mopidy.mopidy.plist ~/Library/LaunchAgents
-   $ launchctl load ~/Library/LaunchAgents/homebrew.mopidy.mopidy.plist
-   ```
+     ```shell
+     $ cp /opt/tunebot/launchd/homebrew.mopidy.mopidy.plist ~/Library/LaunchAgents
+     $ launchctl load ~/Library/LaunchAgents/homebrew.mopidy.mopidy.plist
+     ```
 
-10. Start Tunebot:
+11. Start Tunebot:
 
     ```shell
     $ cd /opt/tunebot; sudo forever start -o tunebot-api.log -e tunebot-err.log api-server.js
