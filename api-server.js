@@ -109,7 +109,7 @@ function setLastToggledBy (userObj) {
 function setLastSkippedBy (userObj) {
   var deferred = Q.defer();
 
-  redisClient.set('tb:lastSkippedBy', JSON.stringify(userObj), function (err, result) {
+  redisClient.setex('tb:lastSkippedBy', 60, JSON.stringify(userObj), function (err, result) {
     if (err) {
       deferred.reject(err);
     }
