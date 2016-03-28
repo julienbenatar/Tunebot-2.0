@@ -321,6 +321,7 @@ function previous (req, res, next) {
   res.status(200).end();
 }
 
+// TODO: use or remove this function
 function skip (req, res, next) {
   mopidy.playback.next();
 	res.status(200).end();
