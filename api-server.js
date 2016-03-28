@@ -59,6 +59,21 @@ function registerTrack (tlid, user) {
 
 }
 
+function getLastSkipUser() {
+  var deferred = Q.defer();
+
+  redisClient.get('tb:lastSkippedBy', function (err, result) {
+    if (err) {
+      deferred.reject(err);
+    }
+    else {
+      deferred.resolve(JSON.parse(result));
+    }
+  });
+
+  return deferred.promise;
+}
+
 
 function getLastPlayToggleUser () {
   var deferred = Q.defer();
@@ -80,6 +95,21 @@ function setLastToggledBy (userObj) {
   var deferred = Q.defer();
 
   redisClient.set('tb:lastToggledBy', JSON.stringify(userObj), function (err, result) {
+    if (err) {
+      deferred.reject(err);
+    }
+    else {
+      deferred.resolve(result);
+    }
+  });
+
+  return deferred.promise;
+}
+
+function setLastSkippedBy (userObj) {
+  var deferred = Q.defer();
+
+  redisClient.setex('tb:lastSkippedBy', 60, JSON.stringify(userObj), function (err, result) {
     if (err) {
       deferred.reject(err);
     }
@@ -207,6 +237,7 @@ function getState (req, res, next) {
 
 	Q.all([
     getLastPlayToggleUser(),
+    getLastSkipUser(),
 		mopidy.playback.getState(),
 		mopidy.playback.getCurrentTrack(),
 		mopidy.playback.getMute(),
@@ -214,13 +245,14 @@ function getState (req, res, next) {
 		mopidy.playback.getVolume(),
 		mopidy.tracklist.getTlTracks(),
     getLastVolumeBy()
-	]).spread(function (lastPlayToggleUser, state, currentTrack, isMute, timePosition, volume, tracklist, lastVolumeUser) {
+	]).spread(function (lastPlayToggleUser, lastSkipUser, state, currentTrack, isMute, timePosition, volume, tracklist, lastVolumeUser) {
 
     associateTracks(tracklist)
       .then(function (associatedTracksArr) {
 
         var stateResponse = {
           lastPlayToggleUser: lastPlayToggleUser,
+          lastSkipUser: lastSkipUser,
           lastVolumeUser: lastVolumeUser,
           state: state,
           currentTrack: currentTrack,
@@ -289,10 +321,10 @@ function previous (req, res, next) {
   res.status(200).end();
 }
 
+// TODO: use or remove this function
 function skip (req, res, next) {
   mopidy.playback.next();
 	res.status(200).end();
-
 }
 
 function play (req, res, next) {
@@ -347,7 +379,20 @@ function search (req, res, next) {
 
 function removeTrack (req, res, next) {
   var tlid = req.body.tlid;
-  mopidy.tracklist.remove({'tlid': [tlid]});
+
+  mopidy.tracklist.remove({'tlid': [tlid]}).then(function() {
+
+    var picture = req.param('picture');
+    var email = req.param('email');
+    var name = req.param('name');
+
+    setLastSkippedBy({
+      email: email,
+      picture: picture,
+      name: name
+    });
+
+  });
 
   res.status(200).end();
 }
